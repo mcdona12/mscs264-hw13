@@ -23,7 +23,7 @@ library(rvest)
 
 1. Read in the table of data found at https://en.wikipedia.org/wiki/List_of_United_States_cities_by_crime_rate and create a plot showing violent crime rate (total violent crime) vs. property crime rate (total property crime).  Identify outlier cities (those with "extreme" values for `VCrate` and/or `PCrate`) by feeding a data set of outliers into `geom_label_repel()`.
 
-this is my answer blah blah blah
+this is my answer blah blah blah, actually no this is the real answer
 
 Hints:
 
