@@ -23,14 +23,51 @@ library(rvest)
 
 1. Read in the table of data found at https://en.wikipedia.org/wiki/List_of_United_States_cities_by_crime_rate and create a plot showing violent crime rate (total violent crime) vs. property crime rate (total property crime).  Identify outlier cities (those with "extreme" values for `VCrate` and/or `PCrate`) by feeding a data set of outliers into `geom_label_repel()`.
 
-this is my answer blah blah blah, actually no this is the real answer
-
 Hints:
 
 - after reading in the table using `html_table()`, create a data frame with just the columns you want, using a command such as: `crimes3 <- as.data.frame(crimes2)[,c(LIST OF COLUMN NUMBERS)]`.  Otherwise, R gets confused since it appears as if several columns all have the same column name.
 - then, turn `crimes3` into a tibble with `as.tibble(crimes3)` and do necessary tidying: get rid of unneeded rows, parse columns into proper format, etc.
 
+```{r}
+
+crime <- read_html("https://en.wikipedia.org/wiki/List_of_United_States_cities_by_crime_rate")
+crimetable <- html_nodes(crime, css = "table") 
+crimedata <- html_table(crimetable, header = TRUE, fill = TRUE)[[2]]
+crimedata1 <- as.data.frame(crimedata)[,c(1,2,4,10)]
+crimedata2 <- as.tibble(crimedata1)
+
+crimedatatidy <- crimedata2 %>%
+  rename(`Violent_Crime` = "Violent Crime",
+         `Property_Crime` = "Property Crime") %>%
+  mutate(Violent_Crime_Rate = parse_double(Violent_Crime),
+         Property_Crime_Rate = parse_double(Property_Crime)) %>%
+  select(State, City, Violent_Crime_Rate, Property_Crime_Rate)
+  
+crimedatatidy1 <- crimedatatidy[-c(1), ] %>%
+  arrange(State)
+
+outliercrime <- crimedatatidy1 %>%
+  filter(Violent_Crime_Rate >= 1000, Property_Crime_Rate >= 1240)
+
+ggplot(data = crimedatatidy1,aes(x = Violent_Crime_Rate, y = Property_Crime_Rate)) +
+  geom_point() +
+  ggrepel::geom_label_repel(aes(label = City, colour = City), data = outliercrime, show.legend = FALSE)
+  
+```
+
 2. As we did in class, use the `rvest` package to pull off data from imdb's top grossing films released in 2017 at https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc.  Create a tibble that contains the title, gross, imdbscore, and metascore for the top 50 films.  Then generate a scatterplot of one of the ratings vs. gross, labelling outliers as in Question 1 with the title of the movie.
+
+```{r}
+myapikey <- "44dc8f2e" 
+top50 <- read_html("https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc.")
+
+top50table <- tibble(Title = character(), Metascore = double(), 
+                     imdbRating = double(), BoxOffice = double())
+
+
+
+
+```
 
 3. 5 points if you push your Rmd file with HW13 solutions along with the knitted pdf file to your MSCS264-HW13 repository in your GitHub account.  So that I can check, make your repository private (good practice when doing HW), but add me (username = proback) as a collaborator under Settings > Collaborators.
 
@@ -40,4 +77,51 @@ Read Chapter 15 on factors and attempt the following problems:
 
 4. In the `nycflights13` data, just consider flights to O'Hare (dest=="ORD"), and summarize the mean arrival delay by carrier (actually use the entire name of the carrier after merging carrier names into `flights`).  Then use `geom_point` to plot mean arrival delay vs. carrier - first without reordering carrier names, and second after reordering carrier names by mean arrival delay.
 
+```{r}
+library(nycflights13)
+
+oharedelay <- flights %>%
+  filter(dest == "ORD") %>%
+  left_join(airlines, by = "carrier") %>%
+  group_by(name) %>%
+  summarise(av_arr_delay = mean(arr_delay, na.rm = TRUE))
+
+oharedelay
+
+ggplot(data = oharedelay, aes(x = av_arr_delay, y = name)) +
+  geom_point()
+
+oharedelay %>%
+  mutate(name1 = fct_reorder(name, av_arr_delay)) %>%
+  ggplot(aes(x = av_arr_delay, y = name1)) +
+  geom_point()
+
+```
+
 5. Again considering only flights to O'Hare, create a new factor variable which differentiates national carriers (American and United) from regional carriers (all others which fly to O'Hare).  Then create a violin plot comparing arrival delays for all flights to O'Hare from those two groups (you might want to exclude arrival delays over a certain level).
+
+```{r}
+
+flights %>%
+   filter(dest == "ORD") %>%
+  left_join(airlines, by = "carrier") %>%
+  count(name)
+  
+
+oharedelay1 <- flights %>%
+  filter(dest == "ORD") %>%
+  left_join(airlines, by = "carrier") %>%
+  mutate(name = fct_collapse(name,
+                             nationalcarriers = c("American Airlines Inc.", "United Air Lines Inc."),
+                             regionalcarriers = c("Endeavor Air Inc.", "Envoy Air", "ExpressJet Airlines Inc.",
+                                                  "JetBlue Airways", "SkyWest Airlines Inc."))) %>%
+  select(name, arr_delay)
+
+oharedelay2 <- oharedelay1 %>%
+  filter(arr_delay <= 300) 
+
+ggplot(data = oharedelay2, aes(x = name, y = arr_delay)) +
+  geom_violin()
+
+```
+
