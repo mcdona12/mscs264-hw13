@@ -3,8 +3,8 @@ title: 'MSCS 264: Homework #13'
 subtitle: 'Due Tues Nov 20 at 11:59 PM'
 output:
   pdf_document:
-    fig_height: 3
-    fig_width: 4.5
+    fig_height: 4
+    fig_width: 5
   html_document: default
   word_document: default
 editor_options: 
@@ -17,6 +17,7 @@ You should submit a knitted pdf file on Moodle, but be sure to show all of your 
 library(tidyverse)
 library(stringr)
 library(rvest)
+library(httr)
 ```
 
 ##Web scraping
@@ -46,6 +47,8 @@ crimedatatidy <- crimedata2 %>%
 crimedatatidy1 <- crimedatatidy[-c(1), ] %>%
   arrange(State)
 
+crimedatatidy1
+
 outliercrime <- crimedatatidy1 %>%
   filter(Violent_Crime_Rate >= 1000, Property_Crime_Rate >= 1240)
 
@@ -58,18 +61,43 @@ ggplot(data = crimedatatidy1,aes(x = Violent_Crime_Rate, y = Property_Crime_Rate
 2. As we did in class, use the `rvest` package to pull off data from imdb's top grossing films released in 2017 at https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc.  Create a tibble that contains the title, gross, imdbscore, and metascore for the top 50 films.  Then generate a scatterplot of one of the ratings vs. gross, labelling outliers as in Question 1 with the title of the movie.
 
 ```{r}
-myapikey <- "44dc8f2e" 
-top50 <- read_html("https://www.imdb.com/search/title?year=2017&title_type=feature&sort=boxoffice_gross_us,desc.")
 
-top50table <- tibble(Title = character(), Metascore = double(), 
-                     imdbRating = double(), BoxOffice = double())
+top50 <- read_html("https://www.imdb.com/search/title?title_type=feature&year=2017-01-01,2017-12-31&sort=boxoffice_gross_us,desc")
+top50
+title <- html_nodes(top50, ".lister-item-header a")
+title1 <- html_text(title)
+title1
+gross <- html_nodes(top50, ".ghost~ .text-muted+ span")
+gross1 <- html_text(gross)
+gross2 <- parse_number(gross1)
+gross2
+metascore <-  html_nodes(top50, ".ratings-metascore")
+metascore1 <- html_text(metascore)
+metascore2 <- parse_number(metascore1)
+metascore2
+imdbscore <- html_nodes(top50, ".ratings-imdb-rating strong")  
+imdbscore1 <- parse_number(html_text(imdbscore))
+imdbscore1
 
 
+top50table <- tibble(title1, gross2, metascore2, imdbscore1)
+top50table %>%
+  rename("Title" = title1, "Gross" = gross2, "Metascore" = metascore2, "Imdb Score" = imdbscore1)
 
+outliermovie <- top50table %>%
+  filter(gross2 >= 350)
 
+ggplot(data = top50table, aes(x = metascore2, y = gross2)) +
+  geom_point() +
+  geom_smooth() +
+  ggrepel::geom_label_repel(aes(label = title1, colour = title1), data = outliermovie, show.legend = FALSE) +
+  labs(x = "Metascore", y = "Gross (in millions)")
+  
 ```
 
 3. 5 points if you push your Rmd file with HW13 solutions along with the knitted pdf file to your MSCS264-HW13 repository in your GitHub account.  So that I can check, make your repository private (good practice when doing HW), but add me (username = proback) as a collaborator under Settings > Collaborators.
+
+Done.
 
 ##Factors
 
